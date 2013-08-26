@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:vm="http://www.mulesoft.org/schema/mule/vm" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:spring="http://www.springframework.org/schema/beans" version="CE-3.4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+    <flow name="http-interfaceFlow1" doc:name="http-interfaceFlow1">
+        <http:inbound-endpoint exchange-pattern="request-response" host="0.0.0.0" port="${alertsorcheestrator.port}" path="ws/rest/v1/alerts" doc:name="HTTP"/>
+        <custom-transformer class="org.jembi.rhea.transformers.HttpRequestToRestfulHttpRequestTransformer" doc:name="Java"/>
+        <choice doc:name="Choice">
+            <when expression="message.payload.httpMethod.equals('POST')">
+                <vm:outbound-endpoint exchange-pattern="request-response" path="receiveAlert-Generic-NormalizationQueue" doc:name="VM"/>
+            </when>
+            <otherwise>
+            	<logger message="Recieved a request that does not have a HTTP method of POST" level="ERROR" doc:name="Logger"/>
+                <scripting:transformer doc:name="Groovy">
+                    <scripting:script engine="Groovy"><![CDATA[org.jembi.rhea.RestfulHttpResponse res = new org.jembi.rhea.RestfulHttpResponse();
+res.setHttpStatus(404);
+res.setBody("Recieve alerts orchestrator only accepts HTTP method of POST");
+return res;]]></scripting:script>
+                </scripting:transformer>
+            </otherwise>
+        </choice>
+        <custom-transformer class="org.jembi.rhea.transformers.RestfulHttpResponseToHttpResponseTransformer" doc:name="Java"/>
+    </flow>
+</mule>
